@@ -843,6 +843,114 @@ class PFCand(candidate.PtEtaPhiMCandidate, base.NanoCollection):
 _set_repr_name("PFCand")
 
 
+@awkward.mixin_class(behavior)
+class ScoutingHitPatternPOD(base.NanoCollection):
+    @dask_property
+    def hitPattern(self):
+        return self._events()[self._collection_name()+"HitPattern"]._apply_global_index(
+            self._events()[self._collection_name()].hitPatternsIdxG).hitPattern
+    
+    @hitPattern.dask
+    def hitPattern(self, dask_array):
+        return dask_array._events()[self._collection_name()+"HitPattern"]._apply_global_index(
+            dask_array._events()[self._collection_name()].hitPatternsIdxG).hitPattern
+
+_set_repr_name("ScoutingHitPatternPOD")
+
+
+@awkward.mixin_class(behavior)
+class ScoutingMuon(Muon):
+    @dask_property
+    def displaced_vertices(self):
+        """Scouting muon displaced vertices, from ScoutingMuon to ScoutingMuonDisplacedVertex via ScoutingMuonVtxIndx"""
+        vtxIndx = self._events()[self._collection_name()+"VtxIndx"]._apply_global_index(self.verticesIdxG)
+        if "ScoutingDisplacedVertex" in self._events().fields: # old naming convention
+            return self._events()["ScoutingDisplacedVertex"]._apply_global_index(vtxIndx.vtxIndxG)
+        return self._events()[self._collection_name()+"DisplacedVertex"]._apply_global_index(vtxIndx.vtxIndxG)
+
+    @displaced_vertices.dask
+    def displaced_vertices(self, dask_array):
+        vtxIndx = dask_array._events()[self._collection_name()+"VtxIndx"]._apply_global_index(
+            dask_array.verticesIdxG
+            )
+        if "ScoutingDisplacedVertex" in dask_array._events().fields: # old naming convention
+            return dask_array._events()["ScoutingDisplacedVertex"]._apply_global_index(
+                vtxIndx.vtxIndxG
+            )
+        return dask_array._events()[self._collection_name()+"DisplacedVertex"]._apply_global_index(
+            vtxIndx.vtxIndxG
+        )
+    
+    @dask_property
+    def trk_hitPattern_hitPattern(self):
+        """Scouting muon hit pattern, via nScoutingMuonHitPattern"""
+        return self._events()[self._collection_name()+"HitPattern"]._apply_global_index(self.hitPatternsIdxG).hitPattern
+
+    @trk_hitPattern_hitPattern.dask
+    def trk_hitPattern_hitPattern(self, dask_array):
+        return dask_array._events()[self._collection_name()+"HitPattern"]._apply_global_index(
+            dask_array.hitPatternsIdxG
+        ).hitPattern
+    
+    hitPattern_attributes = [
+        "hitCount",
+        "beginTrackHits",
+        "endTrackHits",
+        "beginInner",
+        "endInner",
+        "beginOuter",
+        "endOuter"
+    ]
+
+    @dask_property
+    def trk_hitPattern(self):
+        hitPattern = awkward.zip({
+            attribute: self._events()[self._collection_name(), "trk_hitPattern_"+attribute]
+                for attribute in self.hitPattern_attributes
+            }, 
+            with_name="ScoutingHitPatternPOD",
+            attrs=self.attrs)
+        return awkward.with_parameter(hitPattern, "collection_name", self._collection_name())
+
+    @trk_hitPattern.dask
+    def trk_hitPattern(self, dask_array):
+        hitPattern = awkward.zip({
+            attribute: dask_array._events()[self._collection_name(), "trk_hitPattern_"+attribute] 
+                for attribute in self.hitPattern_attributes
+            },
+            with_name="ScoutingHitPatternPOD",
+            attrs=self.attrs)
+        return awkward.with_parameter(hitPattern, "collection_name", self._collection_name())
+
+_set_repr_name("ScoutingMuon")
+
+ScoutingMuonArray.ProjectionClass2D = vector.TwoVectorArray  # noqa: F821
+ScoutingMuonArray.ProjectionClass3D = vector.ThreeVectorArray  # noqa: F821
+ScoutingMuonArray.ProjectionClass4D = ElectronArray  # noqa: F821
+ScoutingMuonArray.MomentumClass = vector.LorentzVectorArray  # noqa: F821
+
+
+@awkward.mixin_class(behavior)
+class ScoutingElectron(Electron):
+    @dask_property
+    def tracks(self):
+        """Scouting electron tracks, via nScoutingElectronTrack"""
+        return self._events().ScoutingElectronTrack._apply_global_index(self.tracksIdxG)
+
+    @tracks.dask
+    def tracks(self, dask_array):
+        return dask_array._events().ScoutingElectronTrack._apply_global_index(
+            dask_array.tracksIdxG
+        )
+
+_set_repr_name("ScoutingElectron")
+
+ScoutingElectronArray.ProjectionClass2D = vector.TwoVectorArray  # noqa: F821
+ScoutingElectronArray.ProjectionClass3D = vector.ThreeVectorArray  # noqa: F821
+ScoutingElectronArray.ProjectionClass4D = ElectronArray  # noqa: F821
+ScoutingElectronArray.MomentumClass = vector.LorentzVectorArray  # noqa: F821
+
+
 __all__ = [
     "PtEtaPhiMCollection",
     "GenParticle",
@@ -861,4 +969,7 @@ __all__ = [
     "AssociatedPFCand",
     "AssociatedSV",
     "PFCand",
+    "ScoutingHitPatternPOD"
+    "ScoutingMuon",
+    "ScoutingElectron",
 ]

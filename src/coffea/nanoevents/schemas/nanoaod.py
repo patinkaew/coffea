@@ -402,16 +402,60 @@ class ScoutingNanoAODSchema(NanoAODSchema):
 
     mixins = {
         **NanoAODSchema.mixins,
+        # 2022-23
         "ScoutingJet": "Jet",
         "ScoutingFatJet": "FatJet",
         "ScoutingMET": "MissingET",
+        "ScoutingDisplacedVertex": "Vertex",
+        "ScoutingPrimaryVertex": "Vertex",
+        "ScoutingElectron": "ScoutingElectron",
+        "ScoutingPhoton": "Photon",
+        "ScoutingMuon": "ScoutingMuon",
+        
+        # added in 2024
+        "ScoutingPFJet": "Jet",
+        "ScoutingPFJetRecluster": "Jet",
+        "ScoutingFatJetRecluster": "FatJet",
+        "ScoutingMuonNoVtx": "ScoutingMuon",
+        "ScoutingMuonVtx": "ScoutingMuon",
         "ScoutingMuonNoVtxDisplacedVertex": "Vertex",
         "ScoutingMuonVtxDisplacedVertex": "Vertex",
-        "ScoutingPrimaryVertex": "Vertex",
-        "ScoutingElectron": "Electron",
-        "ScoutingPhoton": "Photon",
-        "ScoutingMuonNoVtx": "Muon",
-        "ScoutingMuonVtx": "Muon",
     }
 
-    all_cross_references = {**NanoAODSchema.all_cross_references}
+    all_cross_references = {
+        **NanoAODSchema.all_cross_references,
+        "ScoutingMuonVtxIndx_vtxIndx": "ScoutingMuonDisplacedVertex",
+        "ScoutingMuonNoVtxVtxIndx_vtxIndx": "ScoutingMuonNoVtxDisplacedVertex",
+        "ScoutingMuonVtxVtxIndx_vtxIndx": "ScoutingMuonVtxDisplacedVertex",
+    }
+
+    nested_index_items = {
+        **NanoAODSchema.nested_index_items,
+        "ScoutingElectron_tracksIdxG": ("ScoutingElectron_nScoutingElectronTrack", "ScoutingElectronTrack"),
+        "ScoutingMuon_verticesIdxG": ("ScoutingMuon_nScoutingMuonVtxIndx", "ScoutingMuonVtxIndx"),
+        "ScoutingMuon_hitPatternsIdxG": ("ScoutingMuon_nScoutingMuonHitPattern", "ScoutingMuonHitPattern"),
+        "ScoutingMuonNoVtx_verticesIdxG": ("ScoutingMuonNoVtx_nScoutingMuonNoVtxVtxIndx", "ScoutingMuonNoVtxVtxIndx"),
+        "ScoutingMuonNoVtx_hitPatternsIdxG": ("ScoutingMuonNoVtx_nScoutingMuonNoVtxHitPattern", "ScoutingMuonNoVtxHitPattern"),
+        "ScoutingMuonVtx_verticesIdxG": ("ScoutingMuonVtx_nScoutingMuonVtxVtxIndx", "ScoutingMuonVtxVtxIndx"),
+        "ScoutingMuonVtx_hitPatternsIdxG": ("ScoutingMuonVtx_nScoutingMuonVtxHitPattern", "ScoutingMuonVtxHitPattern"),
+    }
+
+    def __init__(self, base_form, version="latest"):
+        if version == "2023":
+            # using old naming convention
+            self.all_cross_references["ScoutingMuonVtxIndx_vtxIndx"] = "ScoutingDisplacedVertex"
+            del self.all_cross_references["ScoutingMuonNoVtxVtxIndx_vtxIndx"]
+            del self.all_cross_references["ScoutingMuonVtxVtxIndx_vtxIndx"]
+            
+        super().__init__(base_form, version)
+    
+    @classmethod
+    def v2023(cls, base_form):
+        """Build the NanoEvents assuming old ScoutingNano naming convention in 2023
+
+        Returns
+        -------
+            out: NanoAODSchema
+                Schema assuming old ScoutingNano naming convention in 2023
+        """
+        return cls(base_form, version="2023")
