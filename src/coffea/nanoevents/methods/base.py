@@ -3,7 +3,7 @@
 import re
 from abc import abstractmethod
 from functools import partial
-from typing import Any, Callable, List, Tuple, Union
+from typing import Any, Callable, Union
 
 import awkward
 import dask_awkward
@@ -50,7 +50,7 @@ class Systematic:
         Make sure that the parent object always has a field called '__systematics__'.
         """
         if "__systematics__" not in awkward.fields(self):
-            self["__systematics__"] = {}
+            self["__systematics__"] = awkward.broadcast_arrays(self, {})[1]
 
     @property
     def systematics(self):
@@ -68,7 +68,7 @@ class Systematic:
     def _build_variations(
         self,
         name: str,
-        what: Union[str, List[str], Tuple[str]],
+        what: Union[str, list[str], tuple[str]],
         varying_function: Callable,
     ):
         """
@@ -100,7 +100,7 @@ class Systematic:
         self,
         name: str,
         kind: str,
-        what: Union[str, List[str], Tuple[str]],
+        what: Union[str, list[str], tuple[str]],
         varying_function: Callable,
     ):
         """

@@ -15,9 +15,7 @@ behavior.update(candidate.behavior)
 
 class _NanoAODEvents(behavior["NanoEvents"]):
     def __repr__(self):
-        return f"<event {getattr(self,'run','??')}:\
-                {getattr(self,'luminosityBlock','??')}:\
-                {getattr(self,'event','??')}>"
+        return "<NanoAOD event>"
 
 
 behavior["NanoEvents"] = _NanoAODEvents
@@ -163,7 +161,7 @@ class GenParticle(vector.PtEtaPhiMLorentzVector, base.NanoCollection):
         """
         Accessor to distinct child particles with different PDG id, or last ones in the chain.
         Note that this does not always find the correct children, since this sometimes depends
-        on the MC generator! See `here <https://github.com/CoffeaTeam/coffea/pull/698>` for more
+        on the MC generator! See `here <https://github.com/scikit-hep/coffea/pull/698>` for more
         information.
         """
         warnings.warn(
@@ -842,6 +840,10 @@ class PFCand(candidate.PtEtaPhiMCandidate, base.NanoCollection):
 
 _set_repr_name("PFCand")
 
+PFCandArray.ProjectionClass2D = vector.TwoVectorArray  # noqa: F821
+PFCandArray.ProjectionClass3D = vector.ThreeVectorArray  # noqa: F821
+PFCandArray.ProjectionClass4D = PFCandArray  # noqa: F821
+PFCandArray.MomentumClass = vector.LorentzVectorArray  # noqa: F821
 
 @awkward.mixin_class(behavior)
 class ScoutingHitPatternPOD(base.NanoCollection):

@@ -1,6 +1,6 @@
 # For python niceties
 import warnings
-from typing import Dict, List, Optional
+from typing import Optional
 
 import numpy
 
@@ -58,7 +58,7 @@ class triton_wrapper(nonserializable_attribute, numpy_call_wrapper):
     http_client_concurrency = 12  # TODO: check whether this value is optimum
 
     def __init__(
-        self, model_url: str, client_args: Optional[Dict] = None, batch_size=-1
+        self, model_url: str, client_args: Optional[dict] = None, batch_size=-1
     ):
         if _triton_import_error is not None:
             warnings.warn(
@@ -104,7 +104,7 @@ class triton_wrapper(nonserializable_attribute, numpy_call_wrapper):
         return self.pmod.InferenceServerClient(url=self.address, **self.client_args)
 
     @property
-    def client_args(self) -> Dict:
+    def client_args(self) -> dict:
         """
         Function for adding default arguments to the client constructor kwargs.
         """
@@ -116,10 +116,10 @@ class triton_wrapper(nonserializable_attribute, numpy_call_wrapper):
             kwargs.update(self._client_args)
         return kwargs
 
-    def _create_model_metadata(self) -> Dict:
+    def _create_model_metadata(self) -> dict:
         return self.client.get_model_metadata(self.model, self.version, as_json=True)
 
-    def _create_model_inputs(self) -> Dict[str, Dict]:
+    def _create_model_inputs(self) -> dict[str, dict]:
         """
         Extracting the model input data formats from the model_metatdata. Here
         we slightly change the input formats the objects in a format that is
@@ -133,9 +133,14 @@ class triton_wrapper(nonserializable_attribute, numpy_call_wrapper):
             for x in self.model_metadata["inputs"]
         }
 
-    def _create_model_outputs(self) -> List[int]:
-        """Getting a list of names of possible outputs"""
-        return [x["name"] for x in self.model_metadata["outputs"]]
+    def _create_model_outputs(self) -> dict[str, dict]:
+        """
+        Extracting the model output data format.
+        """
+        return {
+            x["name"]: {"shape": tuple(int(i) for i in x["shape"])}
+            for x in self.model_metadata["outputs"]
+        }
 
     @property
     def batch_size(self) -> int:
@@ -156,8 +161,7 @@ class triton_wrapper(nonserializable_attribute, numpy_call_wrapper):
                 self._batch_size = model_config["max_batch_size"]
             else:
                 warnings.warn(
-                    f"Batch size not set by model! Setting to default value {self.batch_size_fallback}. "
-                    "Contact model maintainer to check if this is expected",
+                    f"Batch size not set by model! Setting to default value {self.batch_size_fallback}. Contact model maintainer to check if this is expected",
                     UserWarning,
                 )
                 self._batch_size = self.batch_size_fallback
@@ -169,7 +173,7 @@ class triton_wrapper(nonserializable_attribute, numpy_call_wrapper):
     """
 
     def validate_numpy_input(
-        self, output_list: List[str], input_dict: Dict[str, numpy.array]
+        self, output_list: list[str], input_dict: dict[str, numpy.array]
     ) -> None:
         """
         Check that tritonclient can return the expected input array dimensions and
@@ -243,8 +247,8 @@ class triton_wrapper(nonserializable_attribute, numpy_call_wrapper):
                 )
 
     def numpy_call(
-        self, output_list: List[str], input_dict: Dict[str, numpy.array]
-    ) -> Dict[str, numpy.array]:
+        self, output_list: list[str], input_dict: dict[str, numpy.array]
+    ) -> dict[str, numpy.array]:
         """
         Parameters
         ----------
@@ -322,4 +326,13 @@ class triton_wrapper(nonserializable_attribute, numpy_call_wrapper):
                     output[o] = numpy.concatenate(
                         (output[o], request.as_numpy(o)), axis=0
                     )
+
+        if (
+            output is None
+        ):  # Input was a length-0, so we should generate the length-0 outputs with correct dimension
+            return {
+                o: numpy.zeros(shape=(0, *self.model_outputs[o]["shape"][1:]))
+                for o in output_list
+            }
+
         return {k: v[:orig_len] for k, v in output.items()}
