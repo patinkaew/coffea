@@ -444,8 +444,6 @@ class ScoutingNanoAODSchema(NanoAODSchema):
         if version == "2023":
             # using old naming convention
             self.all_cross_references["ScoutingMuonVtxIndx_vtxIndx"] = "ScoutingDisplacedVertex"
-            del self.all_cross_references["ScoutingMuonNoVtxVtxIndx_vtxIndx"]
-            del self.all_cross_references["ScoutingMuonVtxVtxIndx_vtxIndx"]
             
         super().__init__(base_form, version)
     

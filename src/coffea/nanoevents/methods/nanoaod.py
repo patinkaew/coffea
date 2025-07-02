@@ -850,15 +850,19 @@ class ScoutingHitPatternPOD(base.NanoCollection):
     @dask_property
     def hitPattern(self):
         return self._events()[self._collection_name()+"HitPattern"]._apply_global_index(
-            self._events()[self._collection_name()].hitPatternsIdxG).hitPattern
+            self.hitPatternsIdxG).hitPattern
     
     @hitPattern.dask
     def hitPattern(self, dask_array):
         return dask_array._events()[self._collection_name()+"HitPattern"]._apply_global_index(
-            dask_array._events()[self._collection_name()].hitPatternsIdxG).hitPattern
+            dask_array.hitPatternsIdxG).hitPattern
 
 _set_repr_name("ScoutingHitPatternPOD")
 
+
+behavior.update(
+    awkward._util.copy_behaviors("PtEtaPhiMCandidate", "ScoutingMuon", behavior)
+)
 
 @awkward.mixin_class(behavior)
 class ScoutingMuon(Muon):
@@ -894,43 +898,46 @@ class ScoutingMuon(Muon):
             dask_array.hitPatternsIdxG
         ).hitPattern
     
-    hitPattern_attributes = [
-        "hitCount",
-        "beginTrackHits",
-        "endTrackHits",
-        "beginInner",
-        "endInner",
-        "beginOuter",
-        "endOuter"
-    ]
-
     @dask_property
     def trk_hitPattern(self):
-        hitPattern = awkward.zip({
-            attribute: self._events()[self._collection_name(), "trk_hitPattern_"+attribute]
-                for attribute in self.hitPattern_attributes
-            }, 
-            with_name="ScoutingHitPatternPOD",
-            attrs=self.attrs)
-        return awkward.with_parameter(hitPattern, "collection_name", self._collection_name())
-
+        hitPattern = None
+        for field in self.fields: # remove other fields
+            if not (field == "hitPatternsIdxG" or field.startswith("trk_hitPattern_")):
+                if hitPattern is None:
+                    hitPattern = awkward.without_field(self, field)
+                else:
+                    hitPattern = awkward.without_field(hitPattern, field)
+        for field in hitPattern.fields: # remove prefix trk_hitPattern_
+            if field.startswith("trk_hitPattern_"):
+                hitPattern[field[15:]] = hitPattern[field]
+                hitPattern = awkward.without_field(hitPattern, field)
+        return awkward.with_name(hitPattern, "ScoutingHitPatternPOD", behavior=self.behavior, attrs=self.attrs)
+    
     @trk_hitPattern.dask
     def trk_hitPattern(self, dask_array):
-        hitPattern = awkward.zip({
-            attribute: dask_array._events()[self._collection_name(), "trk_hitPattern_"+attribute] 
-                for attribute in self.hitPattern_attributes
-            },
-            with_name="ScoutingHitPatternPOD",
-            attrs=self.attrs)
-        return awkward.with_parameter(hitPattern, "collection_name", self._collection_name())
+        hitPattern = None
+        for field in self.fields: # remove other fields
+            if not (field == "hitPatternsIdxG" or field.startswith("trk_hitPattern_")):
+                if hitPattern is None:
+                    hitPattern = awkward.without_field(dask_array, field)
+                else:
+                    hitPattern = awkward.without_field(hitPattern, field)
+        for field in hitPattern.fields: # remove prefix trk_hitPattern_
+            if field.startswith("trk_hitPattern_"):
+                hitPattern[field[15:]] = hitPattern[field]
+                hitPattern = awkward.without_field(hitPattern, field)
+        return awkward.with_name(hitPattern, "ScoutingHitPatternPOD", behavior=self.behavior, attrs=self.attrs)
 
 _set_repr_name("ScoutingMuon")
 
 ScoutingMuonArray.ProjectionClass2D = vector.TwoVectorArray  # noqa: F821
 ScoutingMuonArray.ProjectionClass3D = vector.ThreeVectorArray  # noqa: F821
-ScoutingMuonArray.ProjectionClass4D = ElectronArray  # noqa: F821
+ScoutingMuonArray.ProjectionClass4D = ScoutingMuonArray  # noqa: F821
 ScoutingMuonArray.MomentumClass = vector.LorentzVectorArray  # noqa: F821
 
+behavior.update(
+    awkward._util.copy_behaviors("PtEtaPhiMCandidate", "ScoutingElectron", behavior)
+)
 
 @awkward.mixin_class(behavior)
 class ScoutingElectron(Electron):
@@ -949,7 +956,7 @@ _set_repr_name("ScoutingElectron")
 
 ScoutingElectronArray.ProjectionClass2D = vector.TwoVectorArray  # noqa: F821
 ScoutingElectronArray.ProjectionClass3D = vector.ThreeVectorArray  # noqa: F821
-ScoutingElectronArray.ProjectionClass4D = ElectronArray  # noqa: F821
+ScoutingElectronArray.ProjectionClass4D = ScoutingElectronArray  # noqa: F821
 ScoutingElectronArray.MomentumClass = vector.LorentzVectorArray  # noqa: F821
 
 
